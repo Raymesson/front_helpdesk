@@ -5,22 +5,15 @@ import { Column } from 'primereact/column';
 import { DataTable } from 'primereact/datatable';
 import { Dialog } from 'primereact/dialog';
 import { FileUpload } from 'primereact/fileupload';
-import { InputNumber, InputNumberValueChangeEvent } from 'primereact/inputnumber';
 import { InputText } from 'primereact/inputtext';
-import { InputTextarea } from 'primereact/inputtextarea';
-import { RadioButton, RadioButtonChangeEvent } from 'primereact/radiobutton';
-import { Rating } from 'primereact/rating';
 import { Toast } from 'primereact/toast';
 import { Toolbar } from 'primereact/toolbar';
 import { classNames } from 'primereact/utils';
 import React, { useEffect, useRef, useState } from 'react';
-import { ProductService } from '../../../../demo/service/ProductService';
-import { Demo } from '@/types';
 import { Projeto } from '@/types';
 import { UsuarioService } from '@/styles/service/UsuarioService';
 
-/* @todo Used 'as any' for types here. Will fix in next version due to onSelectionChange event type issue. */
-const Crud = () => {
+const Usuario = () => {
     let usuarioVazio: Projeto.Usuario = {
         id: 0,
         nome: '',
@@ -32,20 +25,21 @@ const Crud = () => {
     const [deleteUsuarioDialog, setDeleteUsuarioDialog] = useState(false);
     const [deleteUsuariosDialog, setDeleteUsuariosDialog] = useState(false);
     const [usuario, setUsuario] = useState<Projeto.Usuario>(usuarioVazio);
-    const [selectedUsuarios, setSelectedUsuarios] = useState(null);
+    const [selectedUsuarios, setSelectedUsuarios] = useState<Projeto.Usuario[]>([]);
     const [submitted, setSubmitted] = useState(false);
     const [globalFilter, setGlobalFilter] = useState('');
     const toast = useRef<Toast>(null);
     const dt = useRef<DataTable<any>>(null);
     const usuarioService = new UsuarioService();
+    const [carregarLista, setcarregarLista] = useState(true);
 
     useEffect(() => {
-       // ProductService.getProducts().then((data) => setProducts(data as any));
-       if(usuarios.length == 0){
+       if(carregarLista){
             usuarioService.listarTodos()
             .then((response) => {
                 console.log(response.data);
                 setUsuarios(response.data);
+                setcarregarLista(false);
             }).catch((error) => {
                 console.log(error);
             })
@@ -79,6 +73,7 @@ const Crud = () => {
             usuarioService.inserir(usuario)
                 .then((response) => {
                     setUsuarioDialog(false);
+                    setcarregarLista(true);
                     setUsuario(usuarioVazio);
                     setUsuarios([]);
                     toast.current?.show({
@@ -99,6 +94,7 @@ const Crud = () => {
                 .then((response) => {
                     setUsuarioDialog(false);
                     setUsuario(usuarioVazio);
+                    setcarregarLista(true);
                     setUsuarios([]);
                     toast.current?.show({
                         severity: 'info',
@@ -114,36 +110,6 @@ const Crud = () => {
                     });
                 })
         }
-
-        // if (usuario.nome.trim()) {
-        //     let _usuarios = [...(usuarios as any)];
-        //     let _usuario = { ...usuario };
-        //     if (usuario.id) {
-        //         const index = findIndexById(usuario.id);
-
-        //         _products[index] = _product;
-        //         toast.current?.show({
-        //             severity: 'success',
-        //             summary: 'Successful',
-        //             detail: 'Product Updated',
-        //             life: 3000
-        //         });
-        //     } else {
-        //         _product.id = createId();
-        //         _product.image = 'product-placeholder.svg';
-        //         _products.push(_product);
-        //         toast.current?.show({
-        //             severity: 'success',
-        //             summary: 'Successful',
-        //             detail: 'Product Created',
-        //             life: 3000
-        //         });
-        //     }
-
-        //     setProducts(_products as any);
-        //     setProductDialog(false);
-        //     setProduct(emptyProduct);
-        // }
     };
 
     const editUsuario = (usuario: Projeto.Usuario) => {
@@ -157,11 +123,12 @@ const Crud = () => {
     };
 
     const deleteUsuario = () => {
-        if (usuario.id !== undefined)
+        if (usuario.id)
             usuarioService.deletar(usuario.id)
                 .then((response) => {
                     setDeleteUsuarioDialog(false);
                     setUsuario(usuarioVazio);
+                    setcarregarLista(true);
                     setUsuarios([]);
                     toast.current?.show({
                         severity: 'info',
@@ -218,16 +185,29 @@ const Crud = () => {
     };
 
     const deleteSelectedUsuarios = () => {
-        // let _products = (products as any)?.filter((val: any) => !(selectedProducts as any)?.includes(val));
-        // setProducts(_products);
-        // setDeleteProductsDialog(false);
-        // setSelectedProducts(null);
-        // toast.current?.show({
-        //     severity: 'success',
-        //     summary: 'Successful',
-        //     detail: 'Products Deleted',
-        //     life: 3000
-        // });
+        
+        Promise.all(selectedUsuarios.map(async (_usuario) => {
+            if(_usuario.id) {
+                await usuarioService.deletar(_usuario.id)
+            }
+        })).then((response) => {
+                    setUsuarios([]);
+                    setcarregarLista(true);
+                    setDeleteUsuariosDialog(false);
+                    setSelectedUsuarios([]);
+                    toast.current?.show({
+                        severity: 'info',
+                        summary: 'Sucesso',
+                        detail: 'Usuário deletado!'
+                });
+                }).catch((error) => {
+                    console.log(error.data);
+                    toast.current?.show({
+                        severity: 'error',
+                        summary: 'Erro',
+                        detail: 'Erro ao deletar!' + error.data
+                    });
+                })
     };
 
     // const onCategoryChange = (e: RadioButtonChangeEvent) => {
@@ -416,4 +396,4 @@ const Crud = () => {
     );
 };
 
-export default Crud;
+export default Usuario;
